@@ -50,8 +50,8 @@ public class OutputHandler {
       System.out.println("사물함: " + lockerPass.display());
     }
 
-    double discountRate = selectedPass.getDiscountRate();
-    int discountPrice = (int) (selectedPass.getPrice() * discountRate);
+    // 출력만 해야하는 기능인데 계산을 수행하고 있다.
+    int discountPrice = selectedPass.getDiscountPrice();
     if (discountPrice > 0) {
       System.out.println("이벤트 할인 금액: " + discountPrice + "원");
     }

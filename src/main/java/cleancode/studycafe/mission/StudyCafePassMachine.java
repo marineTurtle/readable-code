@@ -12,6 +12,7 @@ import java.util.List;
 
 public class StudyCafePassMachine {
 
+  public static final StudyCafeFileHandler STUDY_CAFE_FILE_HANDLER = new StudyCafeFileHandler();
   private final InputHandler inputHandler = new InputHandler();
   private final OutputHandler outputHandler = new OutputHandler();
 
@@ -19,38 +20,24 @@ public class StudyCafePassMachine {
     try {
       outputHandler.showWelcomeMessage();
       outputHandler.showAnnouncement();
-
       outputHandler.askPassTypeSelection();
+
+      // 이용권 종류(시간/주/고정) 획득
       StudyCafePassType studyCafePassType = inputHandler.getPassTypeSelectingUserAction();
 
-      if (studyCafePassType == StudyCafePassType.HOURLY) {
-        StudyCafeFileHandler studyCafeFileHandler = new StudyCafeFileHandler();
-        List<StudyCafePass> studyCafePasses = studyCafeFileHandler.readStudyCafePasses();
-        List<StudyCafePass> hourlyPasses = studyCafePasses.stream()
-          .filter(studyCafePass -> studyCafePass.getPassType() == StudyCafePassType.HOURLY)
-          .toList();
-        outputHandler.showPassListForSelection(hourlyPasses);
-        StudyCafePass selectedPass = inputHandler.getSelectPass(hourlyPasses);
-        outputHandler.showPassOrderSummary(selectedPass, null);
-      } else if (studyCafePassType == StudyCafePassType.WEEKLY) {
-        StudyCafeFileHandler studyCafeFileHandler = new StudyCafeFileHandler();
-        List<StudyCafePass> studyCafePasses = studyCafeFileHandler.readStudyCafePasses();
-        List<StudyCafePass> weeklyPasses = studyCafePasses.stream()
-          .filter(studyCafePass -> studyCafePass.getPassType() == StudyCafePassType.WEEKLY)
-          .toList();
-        outputHandler.showPassListForSelection(weeklyPasses);
-        StudyCafePass selectedPass = inputHandler.getSelectPass(weeklyPasses);
-        outputHandler.showPassOrderSummary(selectedPass, null);
-      } else if (studyCafePassType == StudyCafePassType.FIXED) {
-        StudyCafeFileHandler studyCafeFileHandler = new StudyCafeFileHandler();
-        List<StudyCafePass> studyCafePasses = studyCafeFileHandler.readStudyCafePasses();
-        List<StudyCafePass> fixedPasses = studyCafePasses.stream()
-          .filter(studyCafePass -> studyCafePass.getPassType() == StudyCafePassType.FIXED)
-          .toList();
-        outputHandler.showPassListForSelection(fixedPasses);
-        StudyCafePass selectedPass = inputHandler.getSelectPass(fixedPasses);
+      // 이용권 목록에서 사용자가 선택한 이용권 종류를 필터링 한다.
+      List<StudyCafePass> studyCafePasses = STUDY_CAFE_FILE_HANDLER.readStudyCafePasses();
+      List<StudyCafePass> passes = studyCafePasses.stream()
+        .filter(studyCafePass -> studyCafePass.getPassType() == studyCafePassType)
+        .toList();
+      outputHandler.showPassListForSelection(passes);
 
-        List<StudyCafeLockerPass> lockerPasses = studyCafeFileHandler.readLockerPasses();
+      // 최종 선택된 금액 포함 이용권
+      StudyCafePass selectedPass = inputHandler.getSelectPass(passes);
+
+      if (studyCafePassType == StudyCafePassType.FIXED) {
+        // 고정석+이용기간과 일치하는 사물함 목록 출력
+        List<StudyCafeLockerPass> lockerPasses = STUDY_CAFE_FILE_HANDLER.readLockerPasses();
         StudyCafeLockerPass lockerPass = lockerPasses.stream()
           .filter(option ->
             option.getPassType() == selectedPass.getPassType()
@@ -58,19 +45,16 @@ public class StudyCafePassMachine {
           )
           .findFirst()
           .orElse(null);
+        outputHandler.askLockerPass(lockerPass);
 
-        boolean lockerSelection = false;
-        if (lockerPass != null) {
-          outputHandler.askLockerPass(lockerPass);
-          lockerSelection = inputHandler.getLockerSelection();
-        }
-
+        boolean lockerSelection = inputHandler.getLockerSelection();
         if (lockerSelection) {
           outputHandler.showPassOrderSummary(selectedPass, lockerPass);
-        } else {
-          outputHandler.showPassOrderSummary(selectedPass, null);
+          return;
         }
       }
+
+      outputHandler.showPassOrderSummary(selectedPass, null);
     } catch (AppException e) {
       outputHandler.showSimpleMessage(e.getMessage());
     } catch (Exception e) {

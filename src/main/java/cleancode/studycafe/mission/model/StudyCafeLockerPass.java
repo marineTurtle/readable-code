@@ -1,6 +1,6 @@
 package cleancode.studycafe.mission.model;
 
-public class StudyCafeLockerPass {
+public class StudyCafeLockerPass implements Pass {
 
   private final StudyCafePassType passType;
   private final int duration;
@@ -16,18 +16,22 @@ public class StudyCafeLockerPass {
     return new StudyCafeLockerPass(passType, duration, price);
   }
 
+  @Override
   public StudyCafePassType getPassType() {
     return passType;
   }
 
+  @Override
   public int getDuration() {
     return duration;
   }
 
+  @Override
   public int getPrice() {
     return price;
   }
 
+  @Override
   public String display() {
     if (passType == StudyCafePassType.HOURLY) {
       return String.format("%s시간권 - %d원", duration, price);
