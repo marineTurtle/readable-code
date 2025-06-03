@@ -142,7 +142,7 @@ public class GameBoard {
     private void updateCellAt(CellPosition position, Cell cell) {
         board[position.getRowIndex()][position.getColIndex()] = cell;
     }
-    
+
     private void openSurroundedCells(CellPosition cellPosition) {
         Stack<CellPosition> stack = new Stack<>();
         stack.push(cellPosition);
@@ -167,7 +167,7 @@ public class GameBoard {
             return;
         }
 
-        List<CellPosition> surroundedPositions = calculateSurroundedPositions(cellPosition, getRowSize(), getColSize());
+        List<CellPosition> surroundedPositions = calculateSurroundedPositions(currentCellPosition, getRowSize(), getColSize());
         for (CellPosition surroundedPosition : surroundedPositions) {
             stack.push(surroundedPosition);
         }
