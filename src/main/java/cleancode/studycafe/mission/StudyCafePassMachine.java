@@ -4,15 +4,15 @@ import cleancode.studycafe.mission.exception.AppException;
 import cleancode.studycafe.mission.io.InputHandler;
 import cleancode.studycafe.mission.io.OutputHandler;
 import cleancode.studycafe.mission.io.StudyCafeFileHandler;
-import cleancode.studycafe.mission.model.StudyCafeLockerPass;
-import cleancode.studycafe.mission.model.StudyCafePass;
-import cleancode.studycafe.mission.model.StudyCafePassType;
+import cleancode.studycafe.mission.model.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class StudyCafePassMachine {
 
-  public static final StudyCafeFileHandler STUDY_CAFE_FILE_HANDLER = new StudyCafeFileHandler();
+  public final StudyCafeFileHandler studyCafeFileHandler = new StudyCafeFileHandler();
   private final InputHandler inputHandler = new InputHandler();
   private final OutputHandler outputHandler = new OutputHandler();
 
@@ -22,39 +22,28 @@ public class StudyCafePassMachine {
       outputHandler.showAnnouncement();
       outputHandler.askPassTypeSelection();
 
-      // 이용권 종류(시간/주/고정) 획득
-      StudyCafePassType studyCafePassType = inputHandler.getPassTypeSelectingUserAction();
+      StudyCafePassType passType = inputHandler.getPassTypeSelectingUserAction();
 
-      // 이용권 목록에서 사용자가 선택한 이용권 종류를 필터링 한다.
-      List<StudyCafePass> studyCafePasses = STUDY_CAFE_FILE_HANDLER.readStudyCafePasses();
-      List<StudyCafePass> passes = studyCafePasses.stream()
-        .filter(studyCafePass -> studyCafePass.getPassType() == studyCafePassType)
-        .toList();
-      outputHandler.showPassListForSelection(passes);
+      List<StudyCafeSeatPass> seatPassList = getSeatPassList(passType);
+      outputHandler.showPassListForSelection(seatPassList);
 
-      // 최종 선택된 금액 포함 이용권
-      StudyCafePass selectedPass = inputHandler.getSelectPass(passes);
+      List<StudyCafePass> studyCafePassList = new ArrayList<>();
 
-      if (studyCafePassType == StudyCafePassType.FIXED) {
-        // 고정석+이용기간과 일치하는 사물함 목록 출력
-        List<StudyCafeLockerPass> lockerPasses = STUDY_CAFE_FILE_HANDLER.readLockerPasses();
-        StudyCafeLockerPass lockerPass = lockerPasses.stream()
-          .filter(option ->
-            option.getPassType() == selectedPass.getPassType()
-              && option.getDuration() == selectedPass.getDuration()
-          )
-          .findFirst()
-          .orElse(null);
+      StudyCafeSeatPass selectedSeatPass = inputHandler.getSelectPass(seatPassList);
+      studyCafePassList.add(selectedSeatPass);
+
+      Optional<StudyCafeLockerPass> selectedLockerPass = getLockerPass(selectedSeatPass);
+      selectedLockerPass.ifPresent(lockerPass -> {
         outputHandler.askLockerPass(lockerPass);
-
         boolean lockerSelection = inputHandler.getLockerSelection();
         if (lockerSelection) {
-          outputHandler.showPassOrderSummary(selectedPass, lockerPass);
-          return;
+          studyCafePassList.add(lockerPass);
         }
-      }
+      });
 
-      outputHandler.showPassOrderSummary(selectedPass, null);
+      StudyCafePasses studyCafePasses = StudyCafePasses.of(studyCafePassList);
+      outputHandler.showPassOrderSummary(studyCafePasses);
+
     } catch (AppException e) {
       outputHandler.showSimpleMessage(e.getMessage());
     } catch (Exception e) {
@@ -62,4 +51,21 @@ public class StudyCafePassMachine {
     }
   }
 
+  private List<StudyCafeSeatPass> getSeatPassList(StudyCafePassType studyCafePassType) {
+    List<StudyCafeSeatPass> studyCafeSeatPasses = studyCafeFileHandler.readStudyCafePasses();
+    return studyCafeSeatPasses.stream()
+      .filter(studyCafePass -> studyCafePass.getPassType() == studyCafePassType)
+      .toList();
+  }
+
+  private Optional<StudyCafeLockerPass> getLockerPass(StudyCafeSeatPass seatPass) {
+    if (seatPass.isLockerAvailable()) {
+      List<StudyCafeLockerPass> lockerPasses = studyCafeFileHandler.readLockerPasses();
+      return lockerPasses.stream()
+        .filter(lockerPass -> lockerPass.isSamePassType(seatPass))
+        .findFirst();
+    }
+
+    return Optional.empty();
+  }
 }
